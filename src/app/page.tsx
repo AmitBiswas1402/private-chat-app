@@ -1,13 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { nanoid } from "nanoid";
+import { useEffect, useState } from "react";
+
+const ANIMALS = [
+  "cat",
+  "dog",
+  "hamster",
+  "rabbit",
+  "fox",
+  "bear",
+  "lion",
+  "tiger",
+];
+const OBJECTS = [
+  "chair",
+  "table",
+  "lamp",
+  "desk",
+  "book",
+  "phone",
+  "cup",
+  "pen",
+];
+const STORAGE_KEY = "username";
+
+const generateUsername = () => {
+  const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+  const object = OBJECTS[Math.floor(Math.random() * OBJECTS.length)];
+  return `${animal}-${object}-${nanoid(5)}`;
+};
 
 const HomePage = () => {
   const [username, setUsername] = useState("");
 
+  useEffect(() => {
+    const main = () => {
+      const stored = localStorage.getItem(STORAGE_KEY);
+
+      if (stored) {
+        setUsername(stored);
+        return;
+      }
+
+      const generated = generateUsername();
+      localStorage.setItem(STORAGE_KEY, generated);
+      setUsername(generated);
+    };
+
+    main();
+  }, []);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-green-500">
+            Private Chat
+          </h1>
+          <p className="text-zinc-500 text-sm">A private chat room</p>
+        </div>
+
         <div className="border border-zinc-800 bg-zinc-900/50 p-6 backdrop-blur-md">
           <div className="space-y-5">
             <div className="space-y-2">
