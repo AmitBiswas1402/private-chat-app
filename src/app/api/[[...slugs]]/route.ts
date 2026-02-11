@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 
-const app = new Elysia({ prefix: "/api" }).get("/user", {
+export const app = new Elysia({ prefix: "/api" }).get("/user", {
   user: { name: "John Doe" },
 });
 
