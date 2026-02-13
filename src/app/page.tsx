@@ -3,7 +3,8 @@
 import { client } from "@/lib/client";
 import { useMutation } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState } from "react";
 
 const ANIMALS = [
   "cat",
@@ -35,6 +36,7 @@ const generateUsername = () => {
 
 const HomePage = () => {
   const [username, setUsername] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     const main = () => {
@@ -56,6 +58,10 @@ const HomePage = () => {
   const { mutate: createRoom } = useMutation({
     mutationFn: async () => {
       const res = await client.rooms.create.post();
+      
+      if (res.status === 200) {
+        router.push(`/room/${res.data?.roomId}`);        
+      }
     },
   });
 
