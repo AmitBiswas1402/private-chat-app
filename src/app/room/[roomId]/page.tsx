@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { SendHorizontal } from "lucide-react";
 
 function formatTime(timeRemaining: number | null) {
   const minutes = Math.floor((timeRemaining || 0) / 60);
@@ -12,6 +13,10 @@ function formatTime(timeRemaining: number | null) {
 const PrivateRoom = () => {
   const params = useParams();
   const roomId = params.roomId as string;
+
+  const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [copyStatus, setCopyStatus] = useState("Copy");
   const [timeRemaining, setTimeRemaining] = useState<number | null>(51);
 
@@ -56,9 +61,7 @@ const PrivateRoom = () => {
         </div>
 
         <button className="text-xs uppercase bg-zinc-800 hover:bg-red-600 px-3 py-1.5 rounded text-zinc-400 hover:text-white font-bold transition-all group flex items-center gap-2 disabled:opacity-50">
-          <span className="group-hover:animate-pulse">
-            💣
-          </span>
+          <span className="group-hover:animate-pulse">💣</span>
           Destroy Now
         </button>
       </header>
@@ -71,12 +74,27 @@ const PrivateRoom = () => {
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500 animate-pulse">
               {">"}
             </span>
-            <input type="text" className="w-full bg-black border border-zinc-800 focus:border-zinc-700 focus:outline-none transition-colors text-zinc-100 placeholder:text-zinc-700 py-3 pl-8 pr-4 text-sm rounded-3xl" />
-
+            <input
+              type="text"
+              className="w-full bg-black border border-zinc-800 focus:border-zinc-700 focus:outline-none transition-colors text-zinc-100 placeholder:text-zinc-700 py-3 pl-8 pr-4 text-sm rounded-3xl"
+              placeholder="Type a message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && input.trim()) {
+                  inputRef.current?.focus();
+                }
+              }}
+            />
           </div>
 
+          <button
+            className="bg-zinc-800 text-zinc-400 p-4 text-sm font-bold hover:text-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer uppercase rounded-full"
+            disabled={!input.trim()}
+          >
+            <SendHorizontal size={18} />
+          </button>
         </div>
-
       </div>
     </main>
   );
