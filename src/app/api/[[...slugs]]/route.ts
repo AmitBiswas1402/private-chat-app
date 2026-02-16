@@ -7,17 +7,17 @@ const ROOM_TTL_SECS = 60 * 10; // 10 minutes
 const room = new Elysia({ prefix: "/rooms" }).post("/create", async() => {
   const roomId = nanoid();
 
-  await redis.hset(`meta: ${roomId}`, { 
+  await redis.hset(`meta:${roomId}`, { 
     connected: [],
     createdAt: Date.now() 
   });
 
-  await redis.expire(`meta: ${roomId}`, ROOM_TTL_SECS);
+  await redis.expire(`meta:${roomId}`, ROOM_TTL_SECS);
 
   return { roomId };
 })
 
-const app = new Elysia({ prefix: "/api" }).use(room);
+export const app = new Elysia({ prefix: "/api" }).use(room);
 
 export const GET = app.fetch;
 export const POST = app.fetch;

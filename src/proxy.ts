@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { redis } from "./lib/redis";
 import { nanoid } from "nanoid";
 
-export const proxy = async (req: NextRequest) => {
+export async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   const roomMatch = pathname.match(/^\/room\/([^/]+)$/);
@@ -46,7 +46,7 @@ export const proxy = async (req: NextRequest) => {
   });
 
   return response;
-};
+}
 
 export const config = {
   matcher: "/room/:path*",
