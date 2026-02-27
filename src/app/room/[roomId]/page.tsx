@@ -1,8 +1,12 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { use, useRef, useState } from "react";
+import { messages } from "@/lib/messages";
 import { SendHorizontal } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { client } from "@/lib/client";
+import { useUsername } from "@/hooks/useUsername";
 
 function formatTime(timeRemaining: number | null) {
   const minutes = Math.floor((timeRemaining || 0) / 60);
@@ -13,18 +17,35 @@ function formatTime(timeRemaining: number | null) {
 const PrivateRoom = () => {
   const params = useParams();
   const roomId = params.roomId as string;
+  const { username } = useUsername();
 
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [copyStatus, setCopyStatus] = useState("Copy");
+  const [copyStatus, setCopyStatus] = useState(
+    messages ? messages.copy || "Copy" : "Copy",
+  );
   const [timeRemaining, setTimeRemaining] = useState<number | null>(51);
+
+  const { mutate: sendMessage } = useMutation({
+    mutationFn: async ({ text }: { text: string }) => {
+      await client.messages.post(
+        {
+          sender: username,
+          text,
+        },
+        {
+          query: { roomId },
+        },
+      );
+    },
+  });
 
   const copyLink = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url);
-    setCopyStatus("Copied!");
-    setTimeout(() => setCopyStatus("Copy"), 2000);
+    setCopyStatus(messages.copySuccess || "Copied!");
+    setTimeout(() => setCopyStatus(messages.copy || "Copy"), 2000);
   };
 
   return (
@@ -33,7 +54,7 @@ const PrivateRoom = () => {
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
             <span className="text-xs text-zinc-500">
-              ROOM ID
+              {messages.roomIdLabel || "ROOM ID"}
               <div className="flex items-center gap-2">
                 <span className="font-bold text-green-500">{roomId}</span>
                 <button
@@ -50,7 +71,7 @@ const PrivateRoom = () => {
 
           <div className="flex flex-col">
             <span className="text-xs text-zinc-500 uppercase">
-              Self-Destruct
+              {messages.selfDestructLabel || "Self-Destruct"}
             </span>
             <span
               className={`text-sm font-bold flex items-center gap-2 ${timeRemaining !== null && timeRemaining < 60 ? "text-red-500" : "text-amber-500"}`}
@@ -62,7 +83,7 @@ const PrivateRoom = () => {
 
         <button className="text-xs uppercase bg-zinc-800 hover:bg-red-600 px-3 py-1.5 rounded text-zinc-400 hover:text-white font-bold transition-all group flex items-center gap-2 disabled:opacity-50">
           <span className="group-hover:animate-pulse">💣</span>
-          Destroy Now
+          {messages.destroyNowLabel || "Destroy Now"}
         </button>
       </header>
 
@@ -77,7 +98,7 @@ const PrivateRoom = () => {
             <input
               type="text"
               className="w-full bg-black border border-zinc-800 focus:border-zinc-700 focus:outline-none transition-colors text-zinc-100 placeholder:text-zinc-700 py-3 pl-8 pr-4 text-sm rounded-3xl"
-              placeholder="Type a message..."
+              placeholder={messages.sendMessagePlaceholder}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
