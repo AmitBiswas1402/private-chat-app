@@ -66,7 +66,11 @@ const messages = new Elysia({
     sender: z.string().max(100),
     text: z.string().max(1000)
   })
-});
+}).get("/", async({ auth }) => {
+  const messages = await redis.lrange<Message>(`messages: ${auth.roomId}`, 0, -1);   
+  
+  return {messages}
+})
 
 export const app = new Elysia({ prefix: "/api" })
   .use(room)
