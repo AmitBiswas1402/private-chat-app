@@ -13,6 +13,7 @@ interface Message {
   text: string;
   timestamp: number;
   roomId: string;
+  token?: string;
 }
 
 const room = new Elysia({ prefix: "/rooms" }).post("/create", async() => {
@@ -69,8 +70,14 @@ const messages = new Elysia({
 }).get("/", async({ auth }) => {
   const messages = await redis.lrange<Message>(`messages: ${auth.roomId}`, 0, -1);   
   
-  return {messages}
-})
+  return {messages: messages.map((m) => ({
+    ...m,
+    token: m.token === auth.token ? auth.token : undefined
+  }))}
+}, {
+  query: z.object({ roomId: z.string() })
+}
+)
 
 export const app = new Elysia({ prefix: "/api" })
   .use(room)
