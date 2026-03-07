@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { messages as messageLabels } from "@/lib/messages";
 import { SendHorizontal } from "lucide-react";
@@ -8,6 +8,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { client } from "@/lib/client";
 import { useUsername } from "@/hooks/useUsername";
 import { format } from "date-fns";
+import { useRealtime } from "@upstash/realtime/client";
 
 function formatTime(timeRemaining: number | null) {
   const minutes = Math.floor((timeRemaining || 0) / 60);
@@ -17,8 +18,12 @@ function formatTime(timeRemaining: number | null) {
 
 const PrivateRoom = () => {
   const params = useParams();
+  const router = useRouter();
   const roomId = params.roomId as string;
   const { username } = useUsername();
+
+  const searchParams = useSearchParams();
+  const wasDestroyed = searchParams.get("destroyed") === "true";
 
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +31,7 @@ const PrivateRoom = () => {
   const [copyStatus, setCopyStatus] = useState("Copy");
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
-  const { data: messages } = useQuery({
+  const { data: messages, refetch } = useQuery({
     queryKey: ["messages", roomId],
     queryFn: async () => {
       const res = await client.messages.get({
@@ -46,9 +51,25 @@ const PrivateRoom = () => {
         {
           query: { roomId },
         },
-      );
+      )
+
+      setInput("");
     },
   });
+
+  useRealtime({
+    channels: [roomId],
+    events: ["chat.message", "chat.destroy"],
+    onData: ({ event }) => {
+      if(event === "chat.message") {
+        refetch()        
+      }
+
+      if(event === "chat.destroy") {
+        router.push("/?destroyed=true")
+      }
+    }
+  })
 
   const copyLink = () => {
     const url = window.location.href;
@@ -110,12 +131,14 @@ const PrivateRoom = () => {
           <div key={msg.id} className="flex flex-col items-start">
             <div className="max-w-[80%] group">
               <div className="flex items-baseline gap-3 mb-1">
-                <span className={`text-xs font-bold ${msg.sender === username ? "text-green-500" : "text-blue-500"}`}>
-                  {msg.sender === username ? "You" : msg.sender}                  
+                <span
+                  className={`text-xs font-bold ${msg.sender === username ? "text-green-500" : "text-blue-500"}`}
+                >
+                  {msg.sender === username ? "You" : msg.sender}
                 </span>
 
                 <span className="text-[10px] text-zinc-600">
-                    {format(msg.timestamp, "hh:mm a")}
+                  {format(msg.timestamp, "hh:mm a")}
                 </span>
               </div>
 
