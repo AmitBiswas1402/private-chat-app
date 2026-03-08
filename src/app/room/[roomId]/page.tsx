@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { messages as messageLabels } from "@/lib/messages";
 import { SendHorizontal } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -24,12 +24,46 @@ const PrivateRoom = () => {
 
   const searchParams = useSearchParams();
   const wasDestroyed = searchParams.get("destroyed") === "true";
+  const error = searchParams.get("error");
 
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [copyStatus, setCopyStatus] = useState("Copy");
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+
+  const { data: ttlData } = useQuery({
+    queryKey: ["ttl", roomId],
+    queryFn: async () => {
+      const res = await client.rooms.ttl.get({ query: { roomId } });
+      return res.data;
+    },
+  });
+
+  useEffect(() => {
+    if (ttlData?.ttl !== undefined) setTimeRemaining(ttlData.ttl);
+  }, [ttlData]);
+
+  useEffect(() => {
+    if (timeRemaining === null || timeRemaining < 0) return;
+
+    if (timeRemaining === 0) {
+      router.push("/?destroyed=true");
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timeRemaining, router]);
 
   const { data: messages, refetch } = useQuery({
     queryKey: ["messages", roomId],
@@ -51,7 +85,7 @@ const PrivateRoom = () => {
         {
           query: { roomId },
         },
-      )
+      );
 
       setInput("");
     },
@@ -61,15 +95,23 @@ const PrivateRoom = () => {
     channels: [roomId],
     events: ["chat.message", "chat.destroy"],
     onData: ({ event }) => {
-      if(event === "chat.message") {
-        refetch()        
+      if (event === "chat.message") {
+        refetch();
       }
 
-      if(event === "chat.destroy") {
-        router.push("/?destroyed=true")
+      if (event === "chat.destroy") {
+        router.push("/?destroyed=true");
       }
-    }
-  })
+    },
+  });
+
+  const { mutate: destroyRoom } = useMutation({
+    mutationFn: async () => {
+      await client.rooms.delete(null, {
+        query: { roomId },
+      });
+    },
+  });
 
   const copyLink = () => {
     const url = window.location.href;
@@ -80,6 +122,47 @@ const PrivateRoom = () => {
 
   return (
     <main className="flex flex-col h-screen max-h-screen overflow-hidden">
+      {/* Error/Status Alert Banner */}
+      {(wasDestroyed ||
+        error === "room-not-found" ||
+        error === "room-full") && (
+        <div className="bg-red-950/50 border-b border-red-900 p-4 text-center">
+          {wasDestroyed && (
+            <>
+              <p className="text-red-500 text-sm font-bold uppercase">
+                Room Destroyed!!
+              </p>
+              <p className="text-zinc-500 text-xs mt-1">
+                All messages have been destroyed. Create a new room to start
+                fresh!
+              </p>
+            </>
+          )}
+          {error === "room-not-found" && (
+            <>
+              <p className="text-red-500 text-sm font-bold uppercase">
+                Room Not Found
+              </p>
+              <p className="text-zinc-500 text-xs mt-1">
+                This room does not exist. It may have been destroyed or the link
+                is incorrect.
+              </p>
+            </>
+          )}
+          {error === "room-full" && (
+            <>
+              <p className="text-red-500 text-sm font-bold uppercase">
+                Room Full
+              </p>
+              <p className="text-zinc-500 text-xs mt-1">
+                This room has reached its maximum capacity. Please try again
+                later or create a new room.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
       <header className="border-b border-zinc-800 p-4 flex items-center justify-between bg-zinc-900/30">
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
@@ -111,7 +194,10 @@ const PrivateRoom = () => {
           </div>
         </div>
 
-        <button className="text-xs uppercase bg-zinc-800 hover:bg-red-600 px-3 py-1.5 rounded text-zinc-400 hover:text-white font-bold transition-all group flex items-center gap-2 disabled:opacity-50">
+        <button
+          onClick={() => destroyRoom()}
+          className="text-xs uppercase bg-zinc-800 hover:bg-red-600 px-3 py-1.5 rounded text-zinc-400 hover:text-white font-bold transition-all group flex items-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+        >
           <span className="group-hover:animate-pulse">💣</span>
           {messageLabels.destroyNowLabel || "Destroy Now"}
         </button>
