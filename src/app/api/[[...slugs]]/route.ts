@@ -78,7 +78,7 @@ const messages = new Elysia({
         roomId,
       };
 
-      await redis.rpush(`messages: ${roomId}`, {
+      await redis.rpush(`messages:${roomId}`, {
         ...message,
         token: auth.token,
       });
@@ -87,8 +87,8 @@ const messages = new Elysia({
 
       const remianing = await redis.ttl(`meta:${roomId}`);
 
-      await redis.expire(`messages: ${roomId}`, remianing);
-      await redis.expire(`history: ${roomId}`, remianing);
+      await redis.expire(`messages:${roomId}`, remianing);
+      await redis.expire(`history:${roomId}`, remianing);
       await redis.expire(roomId, remianing);
     },
     {
@@ -103,7 +103,7 @@ const messages = new Elysia({
     "/",
     async ({ auth }) => {
       const messages = await redis.lrange<Message>(
-        `messages: ${auth.roomId}`,
+        `messages:${auth.roomId}`,
         0,
         -1,
       );
